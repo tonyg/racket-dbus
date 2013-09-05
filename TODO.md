@@ -2,7 +2,6 @@
 
 ## Client
 
- *  raise exceptions
  *  subscribe to signals
 
 ## Server

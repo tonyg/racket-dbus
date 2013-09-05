@@ -60,6 +60,10 @@ So, in order to connect to the system bus on a typical Linux system:
   Communication-related failure exception.
 }
 
+@defproc[(exn:fail:dbus:call? (v any/c)) boolean?]{
+  Remote call failed.
+}
+
 
 @subsection{Bus Names}
 

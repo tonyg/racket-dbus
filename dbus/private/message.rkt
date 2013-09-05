@@ -126,6 +126,15 @@
         (bytes-append head-bytes option-bytes padding-bytes body-bytes)))
 
 
+    ;; Return message type and payload.
+    (define/public (get-result)
+      (match message-type
+        (1 (cons 'call   payload))
+        (2 (cons 'return payload))
+        (3 (cons 'error  payload))
+        (4 (cons 'signal payload))))
+
+
     ;; Initialize the parent object.
     (super-new)))
 
@@ -221,7 +230,7 @@
     (lambda ()
       (let ((message (read-message in)))
         (values (get-field reply-serial message)
-                (get-field payload      message))))))
+                (send message get-result))))))
 
 
 ; vim:set ts=2 sw=2 et:

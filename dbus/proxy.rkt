@@ -4,7 +4,8 @@
 ;
 
 (require racket/contract
-         racket/class)
+         racket/class
+         racket/match)
 
 (require "private/common.rkt"
          "private/signature.rkt"
@@ -44,6 +45,26 @@
     (super-new)))
 
 
+;; Convert result either to set of values or to an exception.
+(define/contract (handle-result interface-name method-name result)
+                 (-> string? string? pair? any)
+  (match result
+    ((cons type value)
+     (match type
+       ('error (throw exn:fail:dbus:call
+                      (string->symbol
+                        (string-append interface-name "." method-name))
+                      "dbus remote procedure call failed"
+                      "reason" (if (and (list? value)
+                                        (string? (car value)))
+                                 (car value)
+                                 "unknown")))
+
+       ('return (if (null? value)
+                  (void)
+                  (apply values value)))))))
+
+
 ;; Defines mixin class for D-Bus interface.
 (define-syntax-rule (define-dbus-interface name interface-name
                       (method-name args-type) ...)
@@ -52,11 +73,11 @@
       (inherit-field endpoint connection path)
 
       (define/public (method-name . args)
-        (let* ((caller (make-caller args-type))
-               (result (caller
-                         connection endpoint path interface-name
-                         (symbol->string 'method-name) args)))
-          (if (null? result) (void) (apply values result))))
+        (let* ((string-method-name (symbol->string 'method-name))
+               (caller              (make-caller args-type)))
+          (handle-result interface-name string-method-name
+            (caller connection endpoint path interface-name
+                    string-method-name args))))
       ...
 
       (super-new))))

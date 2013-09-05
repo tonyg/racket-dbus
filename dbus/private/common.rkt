@@ -15,6 +15,7 @@
 (define-struct (exn:fail:dbus exn:fail) ())
 (define-struct (exn:fail:dbus:signature exn:fail:dbus) ())
 (define-struct (exn:fail:dbus:connection exn:fail:dbus) ())
+(define-struct (exn:fail:dbus:call exn:fail:dbus) ())
 
 
 ;; D-Bus connection private data.
