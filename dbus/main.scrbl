@@ -56,6 +56,10 @@ So, in order to connect to the system bus on a typical Linux system:
   Signature or encoding-related failure exception.
 }
 
+@defproc[(exn:fail:dbus:connection? (v any/c)) boolean?]{
+  Communication-related failure exception.
+}
+
 
 @subsection{Bus Names}
 

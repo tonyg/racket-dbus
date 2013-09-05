@@ -12,13 +12,15 @@
 (require "private/common.rkt"
          "private/ffi.rkt"
          "private/signature.rkt"
-         "private/message.rkt")
+         "private/message.rkt"
+         "private/util.rkt")
 
 (provide dbus-connection?
          dbus-connect/socket
          dbus-auth-external
          exn:fail:dbus?
          exn:fail:dbus:signature?
+         exn:fail:dbus:connection?
          dbus-signature?
          dbus-single-signature?
          dbus-object-path?
@@ -46,8 +48,8 @@
     (auth-method in out)
 
     ;; Switch to messaging phase.
-    (fprintf out "BEGIN\r\n")
-    (flush-output out)
+    (fprintf/safe out "BEGIN\r\n")
+    (flush-output/safe out)
 
     ;; Return prepared connection.
     (dbus-connection
@@ -58,8 +60,8 @@
 (define/contract (dbus-auth-external in out)
                  (-> input-port? output-port? void?)
   ;; Try to negotiate...
-  (fprintf out "\0AUTH EXTERNAL ~a\r\n" (hex-number (geteuid)))
-  (flush-output out)
+  (fprintf/safe out "\0AUTH EXTERNAL ~a\r\n" (hex-number (geteuid)))
+  (flush-output/safe out)
 
   ;; Check that server accepted our authentication request.
   (let ((line (read-line in 'any)))

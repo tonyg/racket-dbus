@@ -23,9 +23,10 @@
 
 ;; Infinite sequence of serial numbers for messages.
 (define next-serial
-  (generator ()
-    (for ((i (in-naturals 1)))
-      (yield i))))
+  (synchronized
+    (generator ()
+      (for ((i (in-naturals 1)))
+        (yield i)))))
 
 
 ;; Message types.
@@ -214,8 +215,8 @@
                  (-> input-port? output-port? tandem?)
   (tandem
     (lambda (tag value)
-      (write-bytes (send value serialize) out)
-      (flush-output out))
+      (write-bytes/safe (send value serialize) out)
+      (flush-output/safe out))
 
     (lambda ()
       (let ((message (read-message in)))
