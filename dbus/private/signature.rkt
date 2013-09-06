@@ -3,7 +3,8 @@
 ; D-Bus Signature String Parser
 ;
 
-(require racket/contract
+(require racket/class
+         racket/contract
          racket/function
          racket/port
          racket/list
@@ -25,7 +26,8 @@
          dbus-decoder/c
          make-encoder
          make-decoder
-         make-encoder+decoder)
+         make-encoder+decoder
+         signature-contract-list)
 
 
 ;; Predicate for object path like "/org/freedesktop/DBus".
@@ -445,6 +447,13 @@
                  (-> dbus-signature? (values dbus-encoder/c dbus-decoder/c))
   (values (make-encoder type)
           (make-decoder type)))
+
+
+;; Return list of contracts for given signature.
+(define/contract (signature-contract-list type)
+                 (-> dbus-signature? (listof contract?))
+  (let ((signature (intern-signature type)))
+    (map signature-contract (signature-children signature))))
 
 
 ; vim:set ts=2 sw=2 et:
