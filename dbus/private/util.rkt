@@ -29,12 +29,12 @@
 
 (define (read-failed (exn #f))
   (throw exn:fail:dbus:connection
-         'libvirt "server closed our connnection during read"))
+         'dbus "server closed our connnection during read"))
 
 
 (define (write-failed (exn #f))
   (throw exn:fail:dbus:connection
-         'libvirt "server closed our connnection during write"))
+         'dbus "server closed our connnection during write"))
 
 
 ;; Read bytes from given input port or throw an exception if
