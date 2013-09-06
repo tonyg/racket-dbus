@@ -77,12 +77,12 @@
 
     ;; Return byte string representation of the message.
     (define/public (serialize)
+      ;; Serialize message payload.
+      (define body-bytes
+        (parameterize ((current-offset 0))
+          ((make-encoder signature) (system-big-endian?) payload)))
+
       (parameterize ((current-offset 0))
-
-        ;; Serialize message payload.
-        (define body-bytes
-          ((make-encoder signature) (system-big-endian?) payload))
-
         ;; Serialize the fixed-length header leading the message.
         (define head-bytes
           (head-encoder
