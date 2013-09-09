@@ -3,9 +3,15 @@
 ; Standard D-Bus Interfaces
 ;
 
-(require racket/function)
+(require racket/class
+         racket/contract
+         racket/function
+         racket/string
+         xml/xexpr-path
+         xml)
 
-(require "proxy.rkt")
+(require "proxy.rkt"
+         "main.rkt")
 
 (provide (all-defined-out))
 
@@ -13,6 +19,53 @@
 (define-dbus-interface dbus-introspectable<%>
                        "org.freedesktop.DBus.Introspectable"
   (Introspect ""))
+
+
+;; Return list of child paths for given introspectable object.
+(define/contract (dbus-introspect-children object)
+                 (-> (instanceof/c dbus-introspectable<%>/c)
+                     (listof string?))
+  (xexpr-path-list '(node (name))
+                   (string->xexpr (send object Introspect))))
+
+
+(define/contract (dbus-introspect-methods object)
+                 (-> (instanceof/c dbus-introspectable<%>/c)
+                     (listof
+                       (cons/c dbus-interface-name?
+                               (listof
+                                 (cons/c dbus-member-name?
+                                         (cons/c dbus-signature?
+                                                 dbus-signature?))))))
+  (map (lambda (iface)
+         (cons (xexpr-path-first '((name)) iface)
+               (map (lambda (m)
+                      (let ((in  '(arg (direction "in") (type)))
+                            (out '(arg (direction "out") (type))))
+                        (list* (xexpr-path-first '((name)) m)
+                               (string-append* (xexpr-path-list in m))
+                               (string-append* (xexpr-path-list out m)))))
+                    (xexpr-path-list '(method) iface))))
+       (xexpr-path-list '(interface)
+                        (string->xexpr (send object Introspect)))))
+
+
+(define/contract (dbus-introspect-signals object)
+                 (-> (instanceof/c dbus-introspectable<%>/c)
+                     (listof
+                       (cons/c dbus-interface-name?
+                               (listof
+                                 (cons/c dbus-member-name?
+                                         dbus-signature?)))))
+  (map (lambda (iface)
+         (cons (xexpr-path-first '((name)) iface)
+               (map (lambda (m)
+                      (let ((arg '(arg (type))))
+                        (cons (xexpr-path-first '((name)) m)
+                              (string-append* (xexpr-path-list arg m)))))
+                    (xexpr-path-list '(signal) iface))))
+       (xexpr-path-list '(interface)
+                        (string->xexpr (send object Introspect)))))
 
 
 (define-dbus-interface dbus-properties<%>

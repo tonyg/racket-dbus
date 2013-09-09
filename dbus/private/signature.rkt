@@ -135,6 +135,7 @@
     ("q"  (token-uint16-t))
     ("i"  (token-int32-t))
     ("u"  (token-uint32-t))
+    ("h"  (token-uint32-t))
     ("x"  (token-int64-t))
     ("t"  (token-uint64-t))
     ("d"  (token-double-t))
