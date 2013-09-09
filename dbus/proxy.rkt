@@ -8,6 +8,7 @@
          racket/match)
 
 (require (for-syntax racket/base
+                     racket/syntax
                      syntax/strip-context))
 
 (require "private/common.rkt"
@@ -19,7 +20,7 @@
 (provide current-dbus-connection
          current-dbus-endpoint
          dbus-object%
-         dbus-object/c
+         dbus-object%/c
          define-dbus-interface)
 
 
@@ -36,7 +37,7 @@
 
 
 ;; Contract for generic object proxy class below.
-(define dbus-object/c
+(define dbus-object%/c
   (class/c
     (init-field (path dbus-object-path?)
                 (endpoint dbus-endpoint-name?)
@@ -45,7 +46,7 @@
 
 ;; Generic object proxy with no methods.
 (define/contract dbus-object%
-                 dbus-object/c
+                 dbus-object%/c
   (class object%
     ;; Object path within the endpoint.
     (init-field path)
@@ -85,25 +86,28 @@
   (syntax-case stx ()
     ((_ name interface-name (method-name args-type) ...)
      (with-syntax ((((arg-contracts ...) ...)
-                    (map signature-contract-list
-                          (syntax->datum #'(args-type ...)))))
-       #'(define/contract (name %)
-                          (-> dbus-object/c
-                              (class/c
-                                (method-name (->m arg-contracts ... any))
-                                ...))
-           (class %
-             (inherit-field endpoint connection path)
+                     (map signature-contract-list
+                          (syntax->datum #'(args-type ...))))
+                   (contract-name
+                     (format-id #'name "~a/c" (syntax->datum #'name))))
+       #'(begin
+           (define contract-name
+             (class/c (method-name (->m arg-contracts ... any)) ...))
 
-             (define/public (method-name . args)
-               (let* ((string-method-name (symbol->string 'method-name))
-                      (caller             (make-caller args-type)))
-                 (handle-result interface-name string-method-name
-                   (caller connection endpoint path interface-name
-                           string-method-name args))))
-             ...
+           (define/contract (name %)
+                            (-> dbus-object%/c contract-name)
+             (class %
+               (inherit-field endpoint connection path)
 
-             (super-new)))))))
+               (define/public (method-name . args)
+                 (let* ((string-method-name (symbol->string 'method-name))
+                        (caller             (make-caller args-type)))
+                   (handle-result interface-name string-method-name
+                     (caller connection endpoint path interface-name
+                             string-method-name args))))
+               ...
+
+               (super-new))))))))
 
 
 ; vim:set ts=2 sw=2 et:
