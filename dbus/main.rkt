@@ -6,6 +6,7 @@
 (require racket/contract
          racket/function
          racket/class
+         racket/tcp
          file/sha1
          unstable/socket)
 
@@ -17,7 +18,9 @@
 
 (provide dbus-connection?
          dbus-connect/socket
+         dbus-connect/tcp
          dbus-auth-external
+         dbus-auth-anonymous
          exn:fail:dbus?
          exn:fail:dbus:signature?
          exn:fail:dbus:connection?
@@ -38,22 +41,36 @@
       (number->string num))))
 
 
+;; Make dbus connection from in/out streams and an authentication method.
+(define (make-connection in out auth-method)
+  ;; Perform user-supplied authentication handshake.
+  (auth-method in out)
+
+  ;; Switch to messaging phase.
+  (fprintf/safe out "BEGIN\r\n")
+  (flush-output/safe out)
+
+  ;; Return prepared connection.
+  (dbus-connection
+    (make-dbus-tandem in out)))
+
+
 ;; Connect to D-Bus using an UNIX domain socket.
 (define/contract (dbus-connect/socket path (auth-method dbus-auth-external))
                  (->* (path-string?)
                       ((-> input-port? output-port? void?))
                       dbus-connection?)
   (let-values (((in out) (unix-socket-connect path)))
-    ;; Perform user-supplied authentication handshake.
-    (auth-method in out)
+    (make-connection in out auth-method)))
 
-    ;; Switch to messaging phase.
-    (fprintf/safe out "BEGIN\r\n")
-    (flush-output/safe out)
 
-    ;; Return prepared connection.
-    (dbus-connection
-      (make-dbus-tandem in out))))
+;; Connect to D-Bus using a TCP socket.
+(define/contract (dbus-connect/tcp host port (auth-method dbus-auth-anonymous))
+                 (->* (string? (integer-in 1 65535))
+                      ((-> input-port? output-port? void?))
+                      dbus-connection?)
+  (let-values (((in out) (tcp-connect host port)))
+    (make-connection in out auth-method)))
 
 
 ;; Perform external authentication with effective user id.
@@ -66,8 +83,21 @@
   ;; Check that server accepted our authentication request.
   (let ((line (read-line in 'any)))
     (unless (regexp-match? #rx"^OK " line)
-      (raise (exn:fail:dbus "external dbus authentication failed"
-                            (current-continuation-marks))))))
+      (throw exn:fail:dbus 'dbus-auth-external "authentication failed"))))
+
+
+;; Perform external authentication with effective user id.
+(define/contract (dbus-auth-anonymous in out)
+                 (-> input-port? output-port? void?)
+  ;; Try to negotiate...
+  (fprintf/safe out "\0AUTH ANONYMOUS ~a\r\n"
+                    (bytes->hex-string #"anonymous"))
+  (flush-output/safe out)
+
+  ;; Check that server accepted our authentication request.
+  (let ((line (read-line in 'any)))
+    (unless (regexp-match? #rx"^OK " line)
+      (throw exn:fail:dbus 'dbus-auth-anonymous "authentication failed"))))
 
 
 ; vim:set ts=2 sw=2 et:

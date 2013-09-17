@@ -20,10 +20,24 @@ Native D-Bus Client For Racket.
 
 @defproc[(dbus-connect/socket
            (path path-string?)
-           (auth-method (-> input-port? output-port? void?)))
+           (auth-method
+            (-> input-port? output-port? void?)
+           dbus-auth-external))
          dbus-connection?]{
-  Connects to message bus using an UNIX domain socket using pluggable
+  Connect to message bus via an UNIX domain socket using pluggable
   authentication mechanism.
+}
+
+@defproc[(dbus-connect/tcp
+           (host string?)
+           (port (integer-in 1 65535))
+           (auth-method
+            (-> input-port? output-port? void?)
+            dbus-auth-anonymous))
+         dbus-connection?]{
+  Connect to message bus via a TCP socket using pluggable authentication
+  mechanism.  It does not make much of a sense to use anything else than
+  @racket[dbus-auth-anonymous].
 }
 
 @defproc[(dbus-auth-external (in input-port?) (out output-port?)) void?]{
@@ -31,13 +45,24 @@ Native D-Bus Client For Racket.
   Makes use of operating system capabilities to identify the user.
 }
 
+@defproc[(dbus-auth-anonymous (in input-port?) (out output-port?)) void?]{
+  Anonymous authentication mechanism.
+  It's usually not enabled on the server.
+}
+
 
 So, in order to connect to the system bus on a typical Linux system:
 
 @racketblock[
   (current-dbus-connection
-    (dbus-connect/socket "/var/run/dbus/system_bus_socket"
-                         dbus-auth-external))
+    (dbus-connect/socket "/var/run/dbus/system_bus_socket"))
+]
+
+Or, to connect to a remote bus without authentication:
+
+@racketblock[
+  (current-dbus-connection
+    (dbus-connect/tcp "localhost" 1234))
 ]
 
 
