@@ -68,7 +68,7 @@
 ;; Parsed signature.
 (define-struct/contract signature
   ((alignment exact-positive-integer?)
-   (contract  contract?)
+   (contract  any/c)
    (children  list?)
    (dump      procedure?)
    (load      procedure?)))
@@ -225,7 +225,7 @@
 ;; Create integer type with given specifics.
 (define (make-integer-type minimum maximum byte-length signed?)
   (signature byte-length
-    (integer-in minimum maximum)
+    `(integer-in ,minimum ,maximum)
     null
     (lambda (be? value)
       (write-bytes/align byte-length
@@ -261,8 +261,8 @@
 (define/contract (make-dict-type key-type value-type)
                  (-> signature? signature? signature?)
   (signature 8
-    (cons/c (signature-contract key-type)
-            (signature-contract value-type))
+    `(cons/c ,(signature-contract key-type)
+             ,(signature-contract value-type))
     (list key-type value-type)
     (lambda (be? value)
       (write-bytes/align 8 #"")
@@ -279,7 +279,7 @@
 (define/contract (make-wrapper-type item-types)
                  (-> (listof signature?) signature?)
   (signature 1
-    (apply list/c (map signature-contract item-types))
+    `(list/c ,@(map signature-contract item-types))
     item-types
     (lambda (be? value)
       (for ((item-type  (in-list item-types))
@@ -294,7 +294,7 @@
 (define/contract (make-structure-type item-types)
                  (-> (listof signature?) signature?)
   (signature 8
-    (apply list/c (map signature-contract item-types))
+    `(list/c ,@(map signature-contract item-types))
     item-types
     (lambda (be? value)
       (write-bytes/align 8 #"")
@@ -311,7 +311,7 @@
 (define/contract (make-array-type item-type)
                  (-> signature? signature?)
   (signature 4
-    (listof (signature-contract item-type))
+    `(listof ,(signature-contract item-type))
     (list item-type)
 
     (lambda (be? value)
@@ -348,7 +348,7 @@
 ;; Boolean true/false type.
 (define boolean-type
   (signature 4
-    boolean?
+    'boolean?
     null
     (lambda (be? value)
       ((signature-dump uint32-type) be? (if value 1 0)))
@@ -358,7 +358,7 @@
 
 (define double-type
   (signature 8
-    real?
+    'real?
     null
     (lambda (be? value)
       (write-bytes/align 8 (real->floating-point-bytes value 8 be?)))
@@ -367,7 +367,7 @@
 
 
 (define/contract (make-string-type contract len-len)
-                 (-> contract? exact-positive-integer? signature?)
+                 (-> any/c exact-positive-integer? signature?)
   (signature len-len
     contract
     null
@@ -386,9 +386,9 @@
 
 
 ;; Derive string types.
-(define signature-type (make-string-type dbus-signature? 1))
-(define string-type    (make-string-type string? 4))
-(define object-type    (make-string-type dbus-object-path? 4))
+(define signature-type (make-string-type 'dbus-signature? 1))
+(define string-type    (make-string-type 'string? 4))
+(define object-type    (make-string-type 'dbus-object-path? 4))
 
 
 ;; Return first single value signature from a potentially complex one.
@@ -404,7 +404,7 @@
 ;; Variant: a single value accompanied by it's own signature.
 (define variant-type
   (signature 1
-    (cons/c dbus-single-signature? any/c)
+    '(cons/c dbus-single-signature? any/c)
     null
     (lambda (be? value)
       (let* ((signature  (intern-signature (car value)))
@@ -452,7 +452,7 @@
 
 ;; Return list of contracts for given signature.
 (define/contract (signature-contract-list type)
-                 (-> dbus-signature? (listof contract?))
+                 (-> dbus-signature? list?)
   (let ((signature (intern-signature type)))
     (map signature-contract (signature-children signature))))
 
