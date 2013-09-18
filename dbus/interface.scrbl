@@ -71,7 +71,6 @@
   @defmethod[(AddMatch (rule string?)) void?]{
     Ask bus to route some messages your way.
     Used mainly for signal subscription.
-
     See @hyperlink["http://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules"]{Match Rules}
     section in the D-Bus specification for details.
   }
