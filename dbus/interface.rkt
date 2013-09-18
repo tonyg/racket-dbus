@@ -10,8 +10,7 @@
          xml/xexpr-path
          xml)
 
-(require "proxy.rkt"
-         "main.rkt")
+(require "main.rkt")
 
 (provide (all-defined-out))
 
