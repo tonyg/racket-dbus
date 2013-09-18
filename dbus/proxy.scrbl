@@ -36,11 +36,11 @@ proxy calls to defined methods.
   For example:
 
   @racketblock[
-    (define-dbus-interface dbus-interface% "org.freedesktop.DBus"
+    (define-dbus-interface dbus-interface<%> "org.freedesktop.DBus"
       (Hello "")
       (ListNames ""))
 
-    (define dbus% (dbus-interface% dbus-object%))
+    (define dbus% (dbus-interface<%> dbus-object%))
     (define dbus (new dbus% (object-path "/org/freedesktop/DBus")
                             (endpoint "org.freedesktop.DBus")))
     (send dbus ListNames)
