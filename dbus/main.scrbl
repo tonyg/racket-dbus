@@ -1,7 +1,6 @@
 #lang scribble/manual
 
-@require[(for-label dbus)
-         (for-label racket)]
+@require[(for-label dbus racket)]
 
 @title{D-Bus}
 @author+email["Jan Dvorak" "mordae@anilinux.org"]
@@ -92,6 +91,10 @@ to regular ones.
   }
 }
 
+@defthing[dbus-object%/c contract?]{
+  Contract for the @racket[dbus-object%] class interface.
+}
+
 
 Objects without any methods are not very useful.  In order to create
 proxies that can actually call anything, you need to make use of
@@ -114,8 +117,7 @@ proxy calls to defined methods.
   ]
 }
 
-
-@section{Parameters}
+@subsection{Parameters}
 
 @defparam[current-dbus-connection connection (or/c #f dbus-connection?)]{
   Parameter identifying current dbus connection used when constructing
@@ -189,6 +191,9 @@ You can use these predicates to check your data early.
   Check that the value is a valid endpoint name, such as
   @racket[":123.42"] or @racket["org.freedesktop.DBus"].
 }
+
+
+@include-section["interface.scrbl"]
 
 
 @; vim:set ft=scribble sw=2 ts=2 et:
