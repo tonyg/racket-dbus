@@ -86,11 +86,8 @@
   (syntax-case stx ()
     ((_ name interface-name (method-name args-type) ...)
      (with-syntax ((((arg-contracts ...) ...)
-                     (for/list ((signature
-                                  (in-list (syntax->list #'(args-type ...)))))
-                       (let ((datum (syntax->datum signature)))
-                         (datum->syntax signature
-                           (signature-contract-list datum)))))
+                    (map signature-contract-list
+                         (syntax->datum #'(args-type ...))))
                    (contract-name
                      (format-id #'name "~a/c" (syntax->datum #'name))))
        #'(begin
