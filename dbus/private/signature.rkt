@@ -353,7 +353,7 @@
     (lambda (be? value)
       ((signature-dump uint32-type) be? (if value 1 0)))
     (lambda (be?)
-      (not (= ((signature-load uint32-type)) 0)))))
+      (not (= ((signature-load uint32-type) be?) 0)))))
 
 
 (define double-type
