@@ -7,6 +7,7 @@
          racket/contract
          racket/function
          racket/string
+         racket/dict
          xml/xexpr-path
          xml)
 
@@ -72,6 +73,20 @@
   (Get "ss")
   (Set "ssv")
   (GetAll "s"))
+
+
+;; Get all properties of an object in two level hierarchy.
+(define/contract (dbus-get-properties object)
+                 (-> (and/c (instanceof/c dbus-introspectable<%>/c)
+                            (instanceof/c dbus-properties<%>/c))
+                     any/c)
+  (for/list ((iface (in-list (dict-keys (dbus-introspect-methods object)))))
+    (if (regexp-match? #rx"^org\\.freedesktop\\.DBus\\." iface)
+      (cons iface null)
+      (cons iface
+            (with-handlers ((exn:fail:dbus? (lambda (exn) null)))
+              (for/list (((name value) (in-dict (send object GetAll iface))))
+                (cons name (cdr value))))))))
 
 
 (define-dbus-interface dbus<%>
