@@ -101,4 +101,12 @@
   ((compose dbus<%> dbus-introspectable<%>) dbus-object%))
 
 
+;; Create proxy object for "org.freedesktop.DBus" manager.
+(define/contract (dbus-manager (connection (current-dbus-connection)))
+                 (->* () (dbus-connection?) object?)
+  (new dbus% (path "/org/freedesktop/DBus")
+             (endpoint "org.freedesktop.DBus")
+             (connection connection)))
+
+
 ; vim:set ts=2 sw=2 et:

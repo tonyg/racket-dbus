@@ -89,6 +89,11 @@
   Proxy class for communication with the bus itself.
 }
 
+@defproc[(dbus-manager (connection dbus-connection? (current-dbus-connection)))
+         object?]{
+  Returns instance of the @racket[dbus%] class for specified connection.
+}
+
 
 @; vim:set ft=scribble sw=2 ts=2 et:
 
