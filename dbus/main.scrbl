@@ -50,12 +50,6 @@ Native D-Bus Client For Racket.
 }
 
 
-@defproc[(dbus-hello) string?]{
-  Send Hello message to the bus.
-  You need to send this message before anything else when using a bus.
-}
-
-
 So, in order to connect to the system bus on a typical Linux system:
 
 @racketblock[
