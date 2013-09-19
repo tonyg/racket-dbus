@@ -64,6 +64,17 @@ Or, to connect to a remote bus without authentication:
     (dbus-connect/tcp "localhost" 1234))
 ]
 
+@defproc[(dbus-listen (callback (-> dbus-object-path?
+                                    dbus-interface-name?
+                                    dbus-member-name?
+                                    any/c
+                                    void?))
+                      (connection dbus-connection? (current-dbus-connection)))
+         void?]{
+  Read notifications from the D-Bus connection and call specified
+  @racket[callback] with appropriate parameters every time one arrives.
+}
+
 
 @section{Proxy Objects}
 

@@ -28,6 +28,7 @@
          dbus-connect/tcp
          dbus-auth-external
          dbus-auth-anonymous
+         dbus-listen
          current-dbus-connection
          current-dbus-endpoint
          dbus-object%
@@ -198,6 +199,18 @@
                ...
 
                (super-new))))))))
+
+
+;; Listen to incoming notifications and dispatch them to given function.
+(define/contract (dbus-listen callback (connection (current-dbus-connection)))
+                 (->* ((-> dbus-object-path?
+                           dbus-interface-name?
+                           dbus-member-name?
+                           any/c
+                           void?))
+                      (dbus-connection?)
+                      void?)
+  (listen connection callback))
 
 
 ; vim:set ts=2 sw=2 et:

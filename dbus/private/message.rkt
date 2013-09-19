@@ -18,7 +18,8 @@
          "util.rkt")
 
 (provide make-caller
-         make-dbus-tandem)
+         make-dbus-tandem
+         listen)
 
 
 ;; Infinite sequence of serial numbers for messages.
@@ -230,7 +231,26 @@
     (lambda ()
       (let ((message (read-message in)))
         (values (get-field reply-serial message)
-                (send message get-result))))))
+                (if (get-field reply-serial message)
+                  (send message get-result)
+                  (list (get-field object-path message)
+                        (get-field interface-name message)
+                        (get-field member-name message)
+                        (send message get-result))))))))
+
+
+;; Listen to incoming notifications and dispatch them to given function.
+(define/contract (listen connection callback)
+                 (-> dbus-connection?
+                     (-> dbus-object-path?
+                         dbus-interface-name?
+                         dbus-member-name?
+                         any/c
+                         void?)
+                     void?)
+  (tandem-listen (dbus-connection-tandem connection) #f
+                 (lambda (info)
+                   (apply callback info))))
 
 
 ; vim:set ts=2 sw=2 et:
