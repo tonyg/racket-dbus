@@ -271,7 +271,7 @@
     (lambda (be?)
       (read-bytes/align 8 0)
       (cons ((signature-load key-type) be?)
-            ((signature-load value-type be?))))))
+            ((signature-load value-type) be?)))))
 
 
 ;; Create unaligned multiple value wrapper type.
