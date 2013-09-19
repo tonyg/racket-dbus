@@ -108,7 +108,7 @@
 
 ;; Predicate for single-value signatures. Otherwise normal.
 (define (dbus-single-signature? signature-string)
-  (with-handlers ((exn:fail:dbus:signature? not))
+  (with-handlers ((exn:fail? not))
     (let ((signature (intern-signature signature-string)))
       (and signature
            (<= (length (signature-children signature)) 1)))))
