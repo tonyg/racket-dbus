@@ -3,7 +3,8 @@
 ; Misc Utilities
 ;
 
-(require racket/contract)
+(require racket/contract
+         unstable/error)
 
 (require "common.rkt")
 
@@ -28,13 +29,11 @@
 
 
 (define (read-failed (exn #f))
-  (throw exn:fail:dbus:connection
-         'dbus "server closed our connnection during read"))
+  (error* 'dbus "server closed our connnection during read"))
 
 
 (define (write-failed (exn #f))
-  (throw exn:fail:dbus:connection
-         'dbus "server closed our connnection during write"))
+  (error* 'dbus "server closed our connnection during write"))
 
 
 ;; Read bytes from given input port or throw an exception if
