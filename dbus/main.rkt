@@ -9,7 +9,8 @@
          racket/match
          racket/tcp
          file/sha1
-         unstable/socket)
+         unstable/socket
+         throw)
 
 (require (for-syntax racket/base
                      racket/syntax

@@ -3,7 +3,8 @@
 ; Misc Utilities
 ;
 
-(require racket/contract)
+(require racket/contract
+         throw)
 
 (require "common.rkt")
 

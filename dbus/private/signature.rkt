@@ -10,7 +10,8 @@
          racket/list
          parser-tools/lex
          parser-tools/yacc
-         (prefix-in : parser-tools/lex-sre))
+         (prefix-in : parser-tools/lex-sre)
+         throw)
 
 (require "common.rkt"
          "util.rkt")
@@ -159,9 +160,9 @@
     (end   eof-t)
 
     (error (lambda (tok-ok? tok-name tok-value)
-             (raise (exn:fail:dbus:signature
-                      (format "unexpected ~s token in signature" tok-name)
-                      (current-continuation-marks)))))
+             (throw exn:fail:dbus:signature
+                    'dbus-signature-parser "unexpected token in signature"
+                    "token" tok-name)))
 
     (tokens type-tokens container-tokens control-tokens)
 
@@ -212,9 +213,9 @@
                  (-> string? signature?)
   (define (lex in)
     (with-handlers ((exn? (lambda (exn)
-                            (raise (exn:fail:dbus:signature
-                                     (format "invalid signature ~s" signature)
-                                     (current-continuation-marks))))))
+                            (throw exn:fail:dbus:signature
+                                   'dbus-signature-parser "invalid signature"
+                                   "signature" signature))))
       (signature-lexer in)))
 
   (call-with-input-string signature
