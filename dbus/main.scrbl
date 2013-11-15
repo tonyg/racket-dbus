@@ -138,6 +138,25 @@ proxy calls to defined methods.
 
 @section{Other}
 
+@subsection{Exceptions}
+
+@defproc[(exn:fail:dbus? (v any/c)) boolean?]{
+  Generic bus failure exception.
+}
+
+@defproc[(exn:fail:dbus:signature? (v any/c)) boolean?]{
+  Signature or encoding-related failure exception.
+}
+
+@defproc[(exn:fail:dbus:connection? (v any/c)) boolean?]{
+  Communication-related failure exception.
+}
+
+@defproc[(exn:fail:dbus:call? (v any/c)) boolean?]{
+  Remote call failed.
+}
+
+
 @subsection{Bus Names}
 
 D-Bus uses a whole lot of specially formatted strings.

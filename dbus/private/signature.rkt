@@ -10,8 +10,7 @@
          racket/list
          parser-tools/lex
          parser-tools/yacc
-         (prefix-in : parser-tools/lex-sre)
-         unstable/error)
+         (prefix-in : parser-tools/lex-sre))
 
 (require "common.rkt"
          "util.rkt")
@@ -101,7 +100,7 @@
 
 ;; Predicate for signatures. Interns them as a side effect.
 (define (dbus-signature? signature-string)
-  (with-handlers ((exn:fail? not))
+  (with-handlers ((exn:fail:dbus:signature? not))
     (and (string? signature-string)
          (intern-signature signature-string)
          #t)))
@@ -160,7 +159,9 @@
     (end   eof-t)
 
     (error (lambda (tok-ok? tok-name tok-value)
-             (error* 'signature-parser "unexpected token" "name" tok-name)))
+             (raise (exn:fail:dbus:signature
+                      (format "unexpected ~s token in signature" tok-name)
+                      (current-continuation-marks)))))
 
     (tokens type-tokens container-tokens control-tokens)
 
@@ -211,9 +212,9 @@
                  (-> string? signature?)
   (define (lex in)
     (with-handlers ((exn? (lambda (exn)
-                            (error* 'parse-signature
-                                    "invalid signature"
-                                    "signature" signature))))
+                            (raise (exn:fail:dbus:signature
+                                     (format "invalid signature ~s" signature)
+                                     (current-continuation-marks))))))
       (signature-lexer in)))
 
   (call-with-input-string signature

@@ -9,8 +9,7 @@
          racket/match
          racket/tcp
          file/sha1
-         unstable/socket
-         unstable/error)
+         unstable/socket)
 
 (require (for-syntax racket/base
                      racket/syntax
@@ -35,6 +34,9 @@
          dbus-object%
          dbus-object%/c
          define-dbus-interface
+         exn:fail:dbus?
+         exn:fail:dbus:signature?
+         exn:fail:dbus:connection?
          dbus-signature?
          dbus-single-signature?
          dbus-object-path?
@@ -108,7 +110,7 @@
   ;; Check that server accepted our authentication request.
   (let ((line (read-line in 'any)))
     (unless (regexp-match? #rx"^OK " line)
-      (error* 'dbus-auth-external "authentication failed"))))
+      (throw exn:fail:dbus 'dbus-auth-external "authentication failed"))))
 
 
 ;; Perform external authentication with effective user id.
@@ -122,7 +124,7 @@
   ;; Check that server accepted our authentication request.
   (let ((line (read-line in 'any)))
     (unless (regexp-match? #rx"^OK " line)
-      (error* 'dbus-auth-anonymous "authentication failed"))))
+      (throw exn:fail:dbus 'dbus-auth-anonymous "authentication failed"))))
 
 
 ;; Contract for generic object proxy class below.
@@ -156,13 +158,14 @@
   (match result
     ((cons type value)
      (match type
-       ('error (error* (string->symbol
-                         (string-append interface-name "." method-name))
-                       "dbus remote procedure call failed"
-                       "reason" (if (and (list? value)
-                                         (string? (car value)))
-                                  (car value)
-                                  "unknown")))
+       ('error (throw exn:fail:dbus:call
+                      (string->symbol
+                        (string-append interface-name "." method-name))
+                      "dbus remote procedure call failed"
+                      "reason" (if (and (list? value)
+                                        (string? (car value)))
+                                 (car value)
+                                 "unknown")))
 
        ('return (if (null? value)
                   (void)

@@ -84,7 +84,7 @@
     (if (regexp-match? #rx"^org\\.freedesktop\\.DBus\\." iface)
       (cons iface null)
       (cons iface
-            (with-handlers ((exn:fail? (lambda (exn) null)))
+            (with-handlers ((exn:fail:dbus? (lambda (exn) null)))
               (for/list (((name value) (in-dict (send object GetAll iface))))
                 (cons name (cdr value))))))))
 
