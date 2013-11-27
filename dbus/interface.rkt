@@ -8,7 +8,7 @@
          racket/function
          racket/string
          racket/dict
-         xml/xexpr-path
+         xexpr-path
          xml)
 
 (require "main.rkt")
