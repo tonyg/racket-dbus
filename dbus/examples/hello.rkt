@@ -20,6 +20,6 @@
   ;;                 (signals ,(dbus-introspect-signals m))))
   (pretty-print `((names ,(send m ListNames))
                   (activatable-names ,(send m ListActivatableNames))))
-  (dbus-listen
-   (lambda args
-     (printf "Asynchronous event: ~v\n" args))))
+  (let loop ()
+    (printf "Asynchronous event: ~v\n" (sync (dbus-listen-evt)))
+    (loop)))

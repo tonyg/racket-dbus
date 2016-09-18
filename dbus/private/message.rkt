@@ -3,7 +3,8 @@
 ; D-Bus Message Format
 ;
 
-(require racket/class
+(require racket/async-channel
+         racket/class
          racket/contract
          racket/function
          racket/generator
@@ -19,7 +20,7 @@
 
 (provide make-caller
          make-dbus-thread
-         listen)
+         listen-evt)
 
 
 (define-logger dbus-message)
@@ -229,8 +230,9 @@
                  (-> input-port? output-port? thread?)
   (thread
    (lambda ()
-     (let loop ((active-requests (hash))
-                (pending-events '()))
+     (define event-ch (make-async-channel))
+     (define notification-evt (handle-evt event-ch values))
+     (let loop ((active-requests (hash)))
        (sync (handle-evt (rpc-request-evt)
                          (match-lambda
                            [(list ch 'call serial-number value)
@@ -240,15 +242,10 @@
                                                     (send value get-result))
                             (write-bytes/safe bs out)
                             (flush-output/safe out)
-                            (loop (hash-set active-requests serial-number ch) pending-events)]
-                           [(list ch 'poll)
-                            (when (channel? pending-events)
-                              (error 'make-dbus-thread
-                                     "Multiple threads are polling this connection."))
-                            (if (null? pending-events)
-                                (loop active-requests ch)
-                                (begin (channel-put ch (reverse pending-events))
-                                       (loop active-requests '())))]))
+                            (loop (hash-set active-requests serial-number ch))]
+                           [(list ch 'get-evt)
+                            (channel-put ch notification-evt)
+                            (loop active-requests)]))
              (handle-evt in
                          (lambda (_)
                            (define message (read-message in))
@@ -257,37 +254,28 @@
                            (log-dbus-message-debug "DBUS recving: ~v ~v" serial-number result)
                            (if serial-number
                                (let ((ch (hash-ref active-requests serial-number #f)))
-                                 (if (not ch)
+                                 (if ch
+                                     (channel-put ch result)
                                      (log-dbus-message-warning
                                       "DBUS: Reply received but caller not in table: ~v"
-                                      serial-number)
-                                     (channel-put ch result))
-                                 (loop (hash-remove active-requests serial-number)
-                                       pending-events))
-                               (loop active-requests
-                                     (let ((info (list (get-field object-path message)
-                                                       (get-field interface-name message)
-                                                       (get-field member-name message)
-                                                       result)))
-                                       (if (channel? pending-events)
-                                           (begin (channel-put pending-events (list info))
-                                                  '())
-                                           (cons info pending-events))))))))))))
+                                      serial-number))
+                                 (loop (hash-remove active-requests serial-number)))
+                               (begin (async-channel-put event-ch
+                                                         (list (get-field object-path message)
+                                                               (get-field interface-name message)
+                                                               (get-field member-name message)
+                                                               result))
+                                      (loop active-requests))))))))))
 
 
-;; Listen to incoming notifications and dispatch them to given function.
-(define/contract (listen connection callback)
+;; Event yielding incoming notifications.
+(define/contract (listen-evt connection)
                  (-> dbus-connection?
-                     (-> dbus-object-path?
-                         dbus-interface-name?
-                         dbus-member-name?
-                         any/c
-                         void?)
-                     void?)
-  (let loop ()
-    (for [(info (in-list (rpc-call (dbus-connection-thread connection) 'poll)))]
-      (apply callback info))
-    (loop)))
+                     (evt/c (list/c dbus-object-path?
+                                    dbus-interface-name?
+                                    dbus-member-name?
+                                    any/c)))
+  (rpc-call (dbus-connection-thread connection) 'get-evt))
 
 
 ; vim:set ts=2 sw=2 et:
