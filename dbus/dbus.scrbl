@@ -17,8 +17,34 @@ Native D-Bus Client For Racket.
   Determines if value is a D-Bus connection.
 }
 
+@defproc[(dbus-connect-session-bus (auth-method
+                                    (-> input-port? output-port? void?)
+                                    dbus-auth-external))
+         dbus-connection?]{
+Connect to the session D-Bus by parsing the environment variable
+@tt{DBUS_SESSION_BUS_ADDRESS}. Raises @racket[exn:fail:dbus] if the
+environment variable is undefined, or if it contains an unsupported
+address format.}
+
+@defproc[(dbus-connect-system-bus (auth-method
+                                   (-> input-port? output-port? void?)
+                                   dbus-auth-external))
+         dbus-connection?]{
+Connect to the system D-Bus by delegating to
+@racket[dbus-connect/socket] with the default UNIX socket path.}
+
+@defproc[(dbus-connect/address (address string?)
+                               (auth-method
+                                (-> input-port? output-port? void?)
+                                dbus-auth-external))
+         dbus-connection?]{
+Connect to D-Bus using an address string such as might be contained in
+the @tt{DBUS_SESSION_BUS_ADDRESS} environment variable. Raises
+@racket[exn:fail:dbus] if the address format is unsupported.}
+
+
 @defproc[(dbus-connect/socket
-           (path path-string? "/var/run/dbus/system_bus_socket")
+           (path unix-socket-path? "/var/run/dbus/system_bus_socket")
            (auth-method
             (-> input-port? output-port? void?)
            dbus-auth-external))
@@ -64,15 +90,12 @@ Or, to connect to a remote bus without authentication:
     (dbus-connect/tcp "localhost" 1234))
 ]
 
-@defproc[(dbus-listen (callback (-> dbus-object-path?
-                                    dbus-interface-name?
-                                    dbus-member-name?
-                                    any/c
-                                    void?))
-                      (connection dbus-connection? (current-dbus-connection)))
-         void?]{
-  Read notifications from the D-Bus connection and call specified
-  @racket[callback] with appropriate parameters every time one arrives.
+@defproc[(dbus-listen-evt (connection dbus-connection? (current-dbus-connection)))
+         (evt/c (list/c dbus-object-path?
+                        dbus-interface-name?
+                        dbus-member-name?
+                        any/c))]{
+  Event which reads a notification from the D-Bus connection.
 }
 
 
