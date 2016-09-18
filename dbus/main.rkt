@@ -7,6 +7,7 @@
          racket/function
          racket/class
          racket/match
+         racket/string
          racket/tcp
          file/sha1
          unstable/socket
@@ -25,6 +26,9 @@
 (require (for-syntax "private/signature.rkt"))
 
 (provide dbus-connection?
+         dbus-connect-session-bus
+         dbus-connect-system-bus
+         dbus-connect/address
          dbus-connect/socket
          dbus-connect/tcp
          dbus-auth-external
@@ -80,11 +84,50 @@
   (dbus-connection (make-dbus-thread in out)))
 
 
+;; Connect to the session D-Bus via an environment variable.
+(define/contract (dbus-connect-session-bus (auth-method dbus-auth-external))
+  (->* () ((-> input-port? output-port? void?)) dbus-connection?)
+  (define envvarname "DBUS_SESSION_BUS_ADDRESS")
+  (define address (getenv envvarname))
+  (when (not address)
+    (throw exn:fail:dbus 'dbus-connect-session-bus
+           "Environment variable ~a not defined"
+           envvarname))
+  (dbus-connect/address address auth-method))
+
+
+;; The system D-Bus unix socket path.
+(define system-bus-socket-path "/var/run/dbus/system_bus_socket")
+
+
+;; Connect to the system D-Bus.
+(define/contract (dbus-connect-system-bus (auth-method dbus-auth-external))
+  (->* () ((-> input-port? output-port? void?)) dbus-connection?)
+  (dbus-connect/socket system-bus-socket-path auth-method))
+
+;; Connect to D-Bus using the given address.
+(define/contract (dbus-connect/address address (auth-method dbus-auth-external))
+  (->* (string?) ((-> input-port? output-port? void?)) dbus-connection?)
+  (or (match address
+        [(regexp #px"^unix:(.*)$" (list _ kvs))
+         (define pieces (for/list [(kv (string-split kvs ","))] (string-split kv "=")))
+         (for/or [(piece pieces)]
+           (match piece
+             [(list "abstract" p)
+              (dbus-connect/socket (bytes-append #"\0" (string->bytes/utf-8 p)) auth-method)]
+             [(list "path" p)
+              (dbus-connect/socket p auth-method)]
+             [_ #f]))]
+        [_ #f])
+      (throw exn:fail:dbus 'dbus-connect/address
+             "Unsupported address: ~v" address)))
+
+
 ;; Connect to D-Bus using an UNIX domain socket.
-(define/contract (dbus-connect/socket (path "/var/run/dbus/system_bus_socket")
+(define/contract (dbus-connect/socket (path system-bus-socket-path)
                                       (auth-method dbus-auth-external))
                  (->* ()
-                      (path-string?
+                      (unix-socket-path?
                        (-> input-port? output-port? void?))
                       dbus-connection?)
   (let-values (((in out) (unix-socket-connect path)))
