@@ -4,8 +4,7 @@
 ;
 
 (require racket/contract
-         racket/function
-         tandem)
+         racket/function)
 
 (provide (all-defined-out))
 
@@ -19,7 +18,7 @@
 
 ;; D-Bus connection private data.
 (define-struct/contract dbus-connection
-  ((tandem tandem?)))
+  ((thread thread?)))
 
 
 ;; Define parameter protected by a contract.

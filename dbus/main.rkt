@@ -77,8 +77,7 @@
   (flush-output/safe out)
 
   ;; Return prepared connection.
-  (dbus-connection
-    (make-dbus-tandem in out)))
+  (dbus-connection (make-dbus-thread in out)))
 
 
 ;; Connect to D-Bus using an UNIX domain socket.

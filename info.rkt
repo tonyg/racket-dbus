@@ -1,7 +1,7 @@
 #lang setup/infotab
 
 (define collection 'multi)
-(define deps '("tandem" "xexpr-path"
+(define deps '("xexpr-path"
                "misc1" ;; for misc1/throw
                ))
 

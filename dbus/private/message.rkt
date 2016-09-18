@@ -10,16 +10,19 @@
          racket/match
          racket/list
          racket/port
-         racket/dict
-         tandem)
+         racket/dict)
 
 (require "common.rkt"
          "signature.rkt"
-         "util.rkt")
+         "util.rkt"
+         "rpc.rkt")
 
 (provide make-caller
-         make-dbus-tandem
+         make-dbus-thread
          listen)
+
+
+(define-logger dbus-message)
 
 
 ;; Infinite sequence of serial numbers for messages.
@@ -154,17 +157,18 @@
   (lambda (connection endpoint object-path interface-name method-name items)
     ;; Send the message and wait for the reply.
     (let ((serial-number (next-serial)))
-      (tandem-call
-        (dbus-connection-tandem connection)
-        serial-number
-        (new message% (message-type *call*)
-                      (serial-number serial-number)
-                      (destination endpoint)
-                      (object-path object-path)
-                      (interface-name interface-name)
-                      (member-name method-name)
-                      (signature args-type)
-                      (payload items))))))
+      (rpc-call (dbus-connection-thread connection)
+                'call
+                serial-number
+                (new message%
+                     (message-type *call*)
+                     (serial-number serial-number)
+                     (destination endpoint)
+                     (object-path object-path)
+                     (interface-name interface-name)
+                     (member-name method-name)
+                     (signature args-type)
+                     (payload items))))))
 
 
 ;; Read a single message from given input port.
@@ -220,23 +224,55 @@
                   (payload         body))))
 
 
-;; Creates tandem structure.
-(define/contract (make-dbus-tandem in out)
-                 (-> input-port? output-port? tandem?)
-  (tandem
-    (lambda (tag value)
-      (write-bytes/safe (send value serialize) out)
-      (flush-output/safe out))
-
-    (lambda ()
-      (let ((message (read-message in)))
-        (values (get-field reply-serial message)
-                (if (get-field reply-serial message)
-                  (send message get-result)
-                  (list (get-field object-path message)
-                        (get-field interface-name message)
-                        (get-field member-name message)
-                        (send message get-result))))))))
+;; Creates RPC thread.
+(define/contract (make-dbus-thread in out)
+                 (-> input-port? output-port? thread?)
+  (thread
+   (lambda ()
+     (let loop ((active-requests (hash))
+                (pending-events '()))
+       (sync (handle-evt (rpc-request-evt)
+                         (match-lambda
+                           [(list ch 'call serial-number value)
+                            (define bs (send value serialize))
+                            (log-dbus-message-debug "DBUS sending: ~v ~v"
+                                                    serial-number
+                                                    (send value get-result))
+                            (write-bytes/safe bs out)
+                            (flush-output/safe out)
+                            (loop (hash-set active-requests serial-number ch) pending-events)]
+                           [(list ch 'poll)
+                            (when (channel? pending-events)
+                              (error 'make-dbus-thread
+                                     "Multiple threads are polling this connection."))
+                            (if (null? pending-events)
+                                (loop active-requests ch)
+                                (begin (channel-put ch (reverse pending-events))
+                                       (loop active-requests '())))]))
+             (handle-evt in
+                         (lambda (_)
+                           (define message (read-message in))
+                           (define serial-number (get-field reply-serial message))
+                           (define result (send message get-result))
+                           (log-dbus-message-debug "DBUS recving: ~v ~v" serial-number result)
+                           (if serial-number
+                               (let ((ch (hash-ref active-requests serial-number #f)))
+                                 (if (not ch)
+                                     (log-dbus-message-warning
+                                      "DBUS: Reply received but caller not in table: ~v"
+                                      serial-number)
+                                     (channel-put ch result))
+                                 (loop (hash-remove active-requests serial-number)
+                                       pending-events))
+                               (loop active-requests
+                                     (let ((info (list (get-field object-path message)
+                                                       (get-field interface-name message)
+                                                       (get-field member-name message)
+                                                       result)))
+                                       (if (channel? pending-events)
+                                           (begin (channel-put pending-events (list info))
+                                                  '())
+                                           (cons info pending-events))))))))))))
 
 
 ;; Listen to incoming notifications and dispatch them to given function.
@@ -248,9 +284,10 @@
                          any/c
                          void?)
                      void?)
-  (tandem-listen (dbus-connection-tandem connection) #f
-                 (lambda (info)
-                   (apply callback info))))
+  (let loop ()
+    (for [(info (in-list (rpc-call (dbus-connection-thread connection) 'poll)))]
+      (apply callback info))
+    (loop)))
 
 
 ; vim:set ts=2 sw=2 et:
