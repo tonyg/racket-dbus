@@ -10,7 +10,7 @@
          racket/tcp
          file/sha1
          unstable/socket
-         throw)
+         misc1/throw)
 
 (require (for-syntax racket/base
                      racket/syntax

@@ -4,7 +4,7 @@
 ;
 
 (require racket/contract
-         throw)
+         misc1/throw)
 
 (require "common.rkt")
 

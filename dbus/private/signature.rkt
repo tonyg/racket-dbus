@@ -11,7 +11,7 @@
          parser-tools/lex
          parser-tools/yacc
          (prefix-in : parser-tools/lex-sre)
-         throw)
+         misc1/throw)
 
 (require "common.rkt"
          "util.rkt")
